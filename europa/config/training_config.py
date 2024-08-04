@@ -9,13 +9,13 @@ from .utils import load_obj
 class QuantizationConfig(BaseModel):
     load_in_4bit: bool = True
     bnb_4bit_quant_type: str = "nf4"
-    bnb_4bit_compute_type: str = "torch.bfloat16"
+    bnb_4bit_compute_dtype: str = "torch.bfloat16"
 
     def load_bnb_config(self):
         return BitsAndBytesConfig(
             load_in_4bit=self.load_in_4bit,
             bnb_4bit_quant_type=self.bnb_4bit_quant_type,
-            bnb_4bit_compute_type= load_obj(self.bnb_4bit_compute_type)
+            bnb_4bit_compute_type= load_obj(self.bnb_4bit_compute_dtype)
         )
 
 class LoRAConfig(BaseModel):
