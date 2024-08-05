@@ -76,12 +76,15 @@ class BIDProtoDataset(torch.utils.data.Dataset):
             images.append(path)
         return BIDProtoDataset(images, labels, transforms=transforms)
 
-    def path2token(self, label_path: int):
+    def path2token(self, label_path: str):
         with open(label_path, "r", encoding="ISO-8859-15") as f:
             label = json.load(f)
+            if "document_type" not in label.keys():
+                label["document_type"] = os.path.basename(os.path.dirname(label_path))
+                assert label["document_type"] in LABEL_MAP.keys(), f"Document type {label['document_type']} not in LABEL_MAP"
             return self.json2token(label)
-        
-    def json2token(self, obj: Any):
+
+    def json2token(self, obj: Any, sort_json_key: bool = True):
         """
         Convert an ordered JSON object into a token sequence
         """
@@ -90,17 +93,20 @@ class BIDProtoDataset(torch.utils.data.Dataset):
                 return obj["text_sequence"]
             else:
                 output = ""
-                keys = obj.keys()
+                if sort_json_key:
+                    keys = sorted(obj.keys(), reverse=True)
+                else:
+                    keys = obj.keys()
                 for k in keys:
                     output += (
                         fr"<s_{k}>"
-                        + self.json2token(obj[k])
+                        + self.json2token(obj[k], sort_json_key)
                         + fr"</s_{k}>"
                     )
                 return output
         elif type(obj) == list:
             return r"<sep/".join(
-                [self.json2token(item) for item in obj]
+                [self.json2token(item, sort_json_key) for item in obj]
             )
         else:
             obj = str(obj)
