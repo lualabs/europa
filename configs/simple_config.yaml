@@ -1,0 +1,12 @@
+data:
+  data_dir: "/path/to/bid-proto-dataset"
+  repo_id: "google/paligemma-3b-pt-224"
+  batch_size: 2
+  num_workers: 2
+
+train:
+  max_epochs: 1
+
+model:
+  model_name: "google/paligemma-3b-pt-224"
+  repo_id: "google/paligemma-3b-pt-224"
