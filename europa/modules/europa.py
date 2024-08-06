@@ -30,9 +30,9 @@ class EuropaModule(L.LightningModule):
                                 labels=labels)
         loss = outputs.loss
 
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, batch_size=self.batch_size, prog_bar=True)
 
-        return loss
+        return {"loss": loss}
 
     def validation_step(self, batch, batch_idx, dataset_idx=0):
 
@@ -50,17 +50,52 @@ class EuropaModule(L.LightningModule):
             pred = re.sub(r"(?:(?<=>) | (?=</s_))", "", pred)
             scores.append(edit_distance(pred, answer) / max(len(pred), len(answer)))
 
-            if self.config.train.verbose and len(scores) == 1:
-                print(f"Prediction: {pred}")
-                print(f"    Answer: {answer}")
-                print(f" Normed ED: {scores[0]}")
+        self.log("val_edit_distance", np.mean(scores), on_step=False, on_epoch=True, batch_size=self.batch_size, prog_bar=True)
 
-        self.log("val_edit_distance", np.mean(scores))
-
-        return scores
+        return {"scores": scores, "predictions": predictions, "answers": answers}
 
     def configure_optimizers(self):
         # you could also add a learning rate scheduler if you want
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.config.train.lr)
 
         return optimizer
+    
+    def generate(self, image, prompt="extract JSON.", max_new_tokens=None, **kwargs):
+        """
+        Generate text based on input image and prompt.
+        
+        Args:
+            image (PIL.Image or numpy.ndarray): The input image.
+            prompt (str, optional): Text prompt to guide generation. Defaults to PROMPT.
+            max_new_tokens (int, optional): Maximum number of new tokens to generate.
+        
+        Returns:
+            str: The generated text.
+        """
+        if max_new_tokens is None:
+            max_new_tokens = self.max_length
+
+        # Prepare inputs
+        inputs = self.processor(text=[prompt], images=[image], return_tensors="pt", padding=True)
+        
+        input_ids = inputs["input_ids"].to(self.device)
+        attention_mask = inputs["attention_mask"].to(self.device)
+        pixel_values = inputs["pixel_values"].to(self.device)
+
+        # Generate
+        self.model.eval()  # Ensure the model is in evaluation mode
+        with torch.no_grad():
+            generated_ids = self.model.generate(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                pixel_values=pixel_values,
+                max_new_tokens=max_new_tokens,
+                num_beams=4,
+                no_repeat_ngram_size=3,
+                early_stopping=True,
+                **kwargs
+            )
+
+        # Decode and return the generated text
+        generated_text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        return generated_text.strip()
