@@ -15,7 +15,7 @@ class QuantizationConfig(BaseModel):
         return BitsAndBytesConfig(
             load_in_4bit=self.load_in_4bit,
             bnb_4bit_quant_type=self.bnb_4bit_quant_type,
-            bnb_4bit_compute_type= load_obj(self.bnb_4bit_compute_dtype)
+            bnb_4bit_compute_dtype= load_obj(self.bnb_4bit_compute_dtype)
         )
 
 class LoRAConfig(BaseModel):

@@ -1,7 +1,6 @@
 import os
-from typing import Optional, List, Dict, Union, Any
 from typing_extensions import Self
-from pydantic import BaseModel, model_validator, field_validator
+from pydantic import BaseModel, model_validator
 import yaml
 from .data_config import DataConfig
 from .training_config import TrainingConfig, ModelConfig
