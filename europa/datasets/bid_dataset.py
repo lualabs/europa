@@ -26,7 +26,8 @@ class BIDProtoDataset(torch.utils.data.Dataset):
             self,
             images: List[str],
             label_paths: List[int],
-            transforms: Optional[A.Compose] = None
+            transforms: Optional[A.Compose] = None,
+            collapse_json: bool = False
         ):
         self.images = images
         self.label_paths = label_paths
@@ -34,7 +35,7 @@ class BIDProtoDataset(torch.utils.data.Dataset):
         self.dataset_length = len(self.images)
         self.labels = []
         for label in self.label_paths:
-            self.labels.append(self.path2token(label))
+            self.labels.append(self.path2token(label, collapse_json=collapse_json))
 
     @staticmethod
     def read_dataset(data_dir: str):
@@ -57,15 +58,17 @@ class BIDProtoDataset(torch.utils.data.Dataset):
     @staticmethod
     def from_directory(
         dir_path: str,
-        transforms: Optional[A.Compose] = None
+        transforms: Optional[A.Compose] = None,
+        **kwargs
     ):
         data, labels = BIDProtoDataset.read_dataset(dir_path)
-        return BIDProtoDataset(data, labels, transforms=transforms)
+        return BIDProtoDataset(data, labels, transforms=transforms, **kwargs)
 
     @staticmethod
     def from_list_of_paths(
         path_list: List[str],
-        transforms: Optional[A.Compose] = None
+        transforms: Optional[A.Compose] = None,
+        **kwargs
     ):
         images = []
         labels = []
@@ -74,15 +77,17 @@ class BIDProtoDataset(torch.utils.data.Dataset):
             assert path.endswith(".jpg"), f"Expected path {path} to be a jpg file"
             labels.append(path + ".json")
             images.append(path)
-        return BIDProtoDataset(images, labels, transforms=transforms)
+        return BIDProtoDataset(images, labels, transforms=transforms, **kwargs)
 
-    def path2token(self, label_path: str):
+    def path2token(self, label_path: str, collapse_json: bool = False):
         with open(label_path, "r", encoding="ISO-8859-15") as f:
             label = json.load(f)
             if "document_type" not in label.keys():
                 label["document_type"] = os.path.basename(os.path.dirname(label_path))
                 assert label["document_type"] in LABEL_MAP.keys(), f"Document type {label['document_type']} not in LABEL_MAP"
-            return self.json2token(label)
+            if collapse_json:
+                return self.json2token(label)
+            return json.dumps(label)
 
     def json2token(self, obj: Any, sort_json_key: bool = True):
         """

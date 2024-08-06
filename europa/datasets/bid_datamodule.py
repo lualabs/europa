@@ -36,6 +36,7 @@ class BIDProtoDataModule(pl.LightningDataModule):
             self,
             data_dir: Union[str, List[str]],
             transforms: Optional[A.Compose] = None,
+            **kwargs
         ):
         # if the user passes a string, we assume it's the
         # root directory of all subdirs of images
@@ -44,15 +45,19 @@ class BIDProtoDataModule(pl.LightningDataModule):
         if isinstance(data_dir, str):
             return BIDProtoDataset.from_directory(
                 dir_path=data_dir,
-                transforms=transforms
+                transforms=transforms,
+                **kwargs
             )
         return BIDProtoDataset.from_list_of_paths(
             path_list=self.data_dir,
-            transforms=transforms)
+            transforms=transforms,
+            **kwargs
+        )
     
     def load_and_split_data(
             self,
             data: List[str],
+            **kwargs,
     ) -> Tuple[BIDProtoDataset, BIDProtoDataset]:
         # random split the list into val and train
         train_paths, val_paths =  random_split(
@@ -65,20 +70,23 @@ class BIDProtoDataModule(pl.LightningDataModule):
         )
         train = BIDProtoDataset.from_list_of_paths(
             path_list=[data[d] for d in train_paths.indices],
-            transforms=self.transforms
+            transforms=self.transforms,
+            **kwargs,
         )
         val = BIDProtoDataset.from_list_of_paths(
             path_list=[data[d] for d in val_paths.indices],
-            transforms=self.val_transforms
+            transforms=self.val_transforms,
+            **kwargs,
         )
         return train, val
     
     def load_and_split_data_from_dir(
             self,
-            data_dir: str
+            data_dir: str,
+            **kwargs
         ) -> Tuple[BIDProtoDataset, BIDProtoDataset]:
         data, _ = BIDProtoDataset.read_dataset(data_dir)
-        return self.load_and_split_data(data)
+        return self.load_and_split_data(data=data_dir, **kwargs)
     
     def _setup_collates(self):
         if self.train_collate_fn is None:
