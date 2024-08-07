@@ -38,8 +38,7 @@ class OptimizerConfig(BaseModel):
 
     def load(self, params):
         args = self.args if self.args is not None else {}
-        
-        # return load_obj(self.name)(params=params, lr=self.lr, **args)
+        return load_obj(self.name)(params=params, lr=self.lr, **args)
 
 class SchedulerConfig(BaseModel):
     name: str
@@ -56,7 +55,6 @@ class SchedulerConfig(BaseModel):
         args = self.args if self.args is not None else {}
         # transformers uses a method to load the scheduler... cant use load_obj
         return getattr(transformers, self.name)(optimizer, **args)
-        #return load_obj(self.name)(optimizer, **args)
 
 class LoRAConfig(BaseModel):
     r: int = 8
