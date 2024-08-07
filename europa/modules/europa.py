@@ -18,6 +18,10 @@ class EuropaModule(L.LightningModule):
         self.model = cfg.model.load_model()
         self.max_length = cfg.data.max_length
         self.batch_size = cfg.data.batch_size
+        self.scheduler = None
+        self.optimizer = cfg.train.load_optimizer(params=self.parameters())
+        if cfg.train.scheduler is not None:
+            self.scheduler = cfg.train.load_scheduler(self.optimizer)
 
     def training_step(self, batch, batch_idx):
 
@@ -55,10 +59,11 @@ class EuropaModule(L.LightningModule):
         return {"scores": scores, "predictions": predictions, "answers": answers}
 
     def configure_optimizers(self):
-        # you could also add a learning rate scheduler if you want
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.config.train.lr)
-
-        return optimizer
+        optimizer = self.optimizer
+        if self.scheduler is not None:
+            scheduler = self.scheduler
+            return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
+        return self.optimizer
     
     def generate(self, image, prompt="extract JSON.", max_new_tokens=None, **kwargs):
         """

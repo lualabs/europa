@@ -1,10 +1,15 @@
 import os
-from typing import Optional, List, Any
-from pydantic import BaseModel, ConfigDict
+from typing import Optional, List, Any, Dict
+from pydantic import BaseModel, ConfigDict, field_validator
 import yaml
 from transformers import BitsAndBytesConfig, PaliGemmaForConditionalGeneration
 from peft import get_peft_model, LoraConfig
 from .utils import load_obj
+from .config_map import SCHEDULER_MAP, OPTIMIZER_MAP
+
+CONFIG_DEFAULTS = {
+    "optimizer": "torch.optim.AdamW",
+}
 
 class QuantizationConfig(BaseModel):
     load_in_4bit: bool = True
@@ -17,6 +22,37 @@ class QuantizationConfig(BaseModel):
             bnb_4bit_quant_type=self.bnb_4bit_quant_type,
             bnb_4bit_compute_dtype= load_obj(self.bnb_4bit_compute_dtype)
         )
+    
+class OptimizerConfig(BaseModel):
+    name: str = CONFIG_DEFAULTS["optimizer"]
+    lr: float = 1e-4
+    args: Optional[Dict[str, Any]] = None
+    
+    @field_validator("name", mode="before")
+    @classmethod
+    def maybe_transform_optimizer_string(cls, v):
+        if v in OPTIMIZER_MAP.keys():
+            return OPTIMIZER_MAP[v]
+        return v
+
+    def load(self, params):
+        args = self.args if self.args is not None else {}
+        return load_obj(self.name)(params=params, lr=self.lr, **args)
+
+class SchedulerConfig(BaseModel):
+    name: str
+    args: Optional[Dict[str, Any]] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def maybe_transform_scheduler_string(cls, v):
+        if v in SCHEDULER_MAP.keys():
+            return SCHEDULER_MAP[v]
+        return v
+
+    def load(self, optimizer):
+        args = self.args if self.args is not None else {}
+        return load_obj(self.name)(optimizer, **args)
 
 class LoRAConfig(BaseModel):
     r: int = 8
@@ -63,7 +99,8 @@ class TrainingConfig(BaseModel):
     check_val_every_n_epoch: int = 1
     gradient_clip_val: float = 1.0
     accumulate_grad_batches: int = 8
-    lr: float = 1e-4
+    scheduler: Optional[SchedulerConfig] = None
+    optimizer: Optional[OptimizerConfig] = OptimizerConfig()
     batch_size: Optional[int] = None
     num_nodes: int = 1
     warmup_steps: int = 50
@@ -80,4 +117,10 @@ class TrainingConfig(BaseModel):
             config = yaml.load(f, Loader=yaml.FullLoader)
             config = config["train"]
         return TrainingConfig(**config)
+    
+    def load_scheduler(self, optimizer):
+        return self.scheduler.load(optimizer)
+    
+    def load_optimizer(self, params):
+        return self.optimizer.load(params)
     
