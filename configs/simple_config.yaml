@@ -1,12 +1,20 @@
 data:
-  data_dir: "/path/to/bid-proto-dataset"
-  repo_id: "google/paligemma-3b-pt-224"
-  batch_size: 2
-  num_workers: 2
+    data_dir: "/notebooks/bid-proto-dataset/"
+    repo_id: "google/paligemma-3b-pt-224"
+    batch_size: 2
+    num_workers: 4
 
 train:
-  max_epochs: 1
+    max_epochs: 3
+    optimizer:
+        lr: 0.0001
+    scheduler:
+        name: "cosine-with-warmup"
+        args:
+            num_warmup_steps: 200
+            num_training_steps: 1000
+    accumulate_grad_batches: 4
 
 model:
-  model_name: "google/paligemma-3b-pt-224"
-  repo_id: "google/paligemma-3b-pt-224"
+    model_name: "google/paligemma-3b-pt-224"
+    repo_id: "google/paligemma-3b-pt-224"

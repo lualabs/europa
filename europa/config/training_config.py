@@ -2,6 +2,7 @@ import os
 from typing import Optional, List, Any, Dict
 from pydantic import BaseModel, ConfigDict, field_validator
 import yaml
+import transformers
 from transformers import BitsAndBytesConfig, PaliGemmaForConditionalGeneration
 from peft import get_peft_model, LoraConfig
 from .utils import load_obj
@@ -37,7 +38,8 @@ class OptimizerConfig(BaseModel):
 
     def load(self, params):
         args = self.args if self.args is not None else {}
-        return load_obj(self.name)(params=params, lr=self.lr, **args)
+        
+        # return load_obj(self.name)(params=params, lr=self.lr, **args)
 
 class SchedulerConfig(BaseModel):
     name: str
@@ -52,7 +54,9 @@ class SchedulerConfig(BaseModel):
 
     def load(self, optimizer):
         args = self.args if self.args is not None else {}
-        return load_obj(self.name)(optimizer, **args)
+        # transformers uses a method to load the scheduler... cant use load_obj
+        return getattr(transformers, self.name)(optimizer, **args)
+        #return load_obj(self.name)(optimizer, **args)
 
 class LoRAConfig(BaseModel):
     r: int = 8
