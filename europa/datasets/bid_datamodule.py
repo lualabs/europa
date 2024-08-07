@@ -86,7 +86,7 @@ class BIDProtoDataModule(pl.LightningDataModule):
             **kwargs
         ) -> Tuple[BIDProtoDataset, BIDProtoDataset]:
         data, _ = BIDProtoDataset.read_dataset(data_dir)
-        return self.load_and_split_data(data=data_dir, **kwargs)
+        return self.load_and_split_data(data=data, **kwargs)
     
     def _setup_collates(self):
         if self.train_collate_fn is None:
